@@ -1,0 +1,40 @@
+{
+  "name": "whiteboard-tldraw-q",
+  "version": "1.0.0",
+  "description": "Collaborative whiteboard with tldraw",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "sync-server": "node sync-server/server.mjs",
+    "dev:all": "concurrently \"npm run dev\" \"npm run sync-server\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "@tldraw/sync": "^2.4.6",
+    "@tldraw/sync-core": "^2.4.6",
+    "@tldraw/tlschema": "^2.4.6",
+    "aws-amplify": "^6.11.3",
+    "dotenv": "^17.2.3",
+    "next": "^14.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.4.1",
+    "tldraw": "^2.4.6",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.2.1",
+    "postcss": "^8.4.49",
+    "prisma": "^5.22.0",
+    "tailwindcss": "^3.4.17"
+  }
+}

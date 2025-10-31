@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String          @id @default(uuid())
+  email           String          @unique
+  name            String?
+  boards          Board[]         @relation("UserBoards")
+  collaborations  Collaboration[] @relation("UserCollaborations")
+}
+
+model Board {
+  id            String          @id @default(uuid())
+  title         String
+  ownerId       String
+  owner         User            @relation("UserBoards", fields: [ownerId], references: [id])
+  snapshots     Snapshot[]
+  collaborators Collaboration[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model Snapshot {
+  id        String   @id @default(uuid())
+  boardId   String
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  data      Json
+  createdAt DateTime @default(now())
+}
+
+model Collaboration {
+  id      String @id @default(uuid())
+  boardId String
+  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation("UserCollaborations", fields: [userId], references: [id])
+  role    String
+}
