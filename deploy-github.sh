@@ -156,24 +156,32 @@ sleep 60
 
 # ---------- Deploy from GitHub ----------
 echo "📤 Deploying from GitHub..."
-ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no ec2-user@$PUBLIC_IP <<REMOTE
+ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no ec2-user@$PUBLIC_IP bash <<REMOTE
 cd /home/ec2-user/app
 
 echo "📥 Cloning repository..."
 git clone $GITHUB_REPO .
 
 echo "📝 Creating .env file..."
-cat > .env <<ENV
-DATABASE_URL="$DATABASE_URL"
+cat > .env <<'EOF'
+DATABASE_URL=\$DB_URL
 NODE_ENV=production
-NEXT_PUBLIC_AWS_REGION="$COGNITO_REGION"
-NEXT_PUBLIC_COGNITO_USER_POOL_ID="$COGNITO_POOL_ID"
-NEXT_PUBLIC_COGNITO_CLIENT_ID="$COGNITO_CLIENT_ID"
-NEXT_PUBLIC_SYNC_SERVER_URL="ws://$PUBLIC_IP:5858"
-ENV
+NEXT_PUBLIC_AWS_REGION=\$COG_REGION
+NEXT_PUBLIC_COGNITO_USER_POOL_ID=\$COG_POOL
+NEXT_PUBLIC_COGNITO_CLIENT_ID=\$COG_CLIENT
+NEXT_PUBLIC_SYNC_SERVER_URL=ws://\$PUB_IP:5858
+EOF
+
+sed -i "s|\\\$DB_URL|$DATABASE_URL|g" .env
+sed -i "s|\\\$COG_REGION|$COGNITO_REGION|g" .env
+sed -i "s|\\\$COG_POOL|$COGNITO_POOL_ID|g" .env
+sed -i "s|\\\$COG_CLIENT|$COGNITO_CLIENT_ID|g" .env
+sed -i "s|\\\$PUB_IP|$PUBLIC_IP|g" .env
+
+echo "✅ .env created"
 
 echo "📦 Installing dependencies..."
-npm ci --production
+npm ci
 
 echo "🏗️  Building Next.js..."
 npm run build
