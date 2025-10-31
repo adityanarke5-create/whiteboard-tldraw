@@ -2,207 +2,240 @@
 
 > A real-time collaborative whiteboard built with Next.js 14, tldraw, PostgreSQL, and AWS Cognito.
 
-## 🚀 Quick Start
-
-**New to this project?** Start here:
-
-1. 📖 Read **[GET_STARTED.md](GET_STARTED.md)** for an overview
-2. ⚡ Follow **[QUICKSTART.md](QUICKSTART.md)** to get running in 5 minutes
-3. 📚 Check **[INDEX.md](INDEX.md)** for complete documentation index
-
----
-
-## Features
+## ✨ Features
 
 - 🎨 Real-time collaborative drawing with tldraw
 - 👥 User authentication with AWS Cognito
-- 💾 Auto-save and manual snapshots
+- 💾 Auto-save every 30 seconds + manual save
 - 📤 Export to JSON, SVG, PNG
 - 🔗 Share boards with collaborators
 - 👁️ Role-based access (owner/editor/viewer)
 - 🗄️ PostgreSQL database with Prisma ORM
+- 🔄 WebSocket sync server for real-time collaboration
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-- **Frontend**: Next.js 14 (App Router), React, Tailwind CSS
-- **Drawing**: tldraw
-- **Database**: PostgreSQL with Prisma
+- **Frontend**: Next.js 14 (App Router), React 18, Tailwind CSS
+- **Drawing**: tldraw v3
+- **Database**: PostgreSQL (Neon) with Prisma ORM
 - **Authentication**: AWS Cognito (via AWS Amplify)
-- **Notifications**: react-hot-toast
+- **Real-time Sync**: Custom WebSocket server with @tldraw/sync
+- **Deployment**: AWS EC2 (t2.micro - free tier eligible)
 
-## Prerequisites
+## 🚀 Quick Start (Local Development)
 
+### Prerequisites
 - Node.js 18+
-- PostgreSQL (local or remote)
-- AWS Cognito User Pool (for authentication)
+- PostgreSQL database (local or Neon)
+- AWS Cognito User Pool
 
-## Setup Instructions
-
-### 1. Install Dependencies
-
+### 1. Clone and Install
 ```bash
+git clone https://github.com/adityanarke5-create/whiteboard-tldraw.git
+cd whiteboard-tldraw
 npm install
 ```
 
-### 2. Configure Environment Variables
-
-Update `.env` file with your configuration:
-
+### 2. Configure Environment
+Create `.env` file:
 ```env
-DATABASE_URL="postgresql://postgres:password@localhost:5432/whiteboard?schema=public"
-
-# AWS Cognito Configuration
-NEXT_PUBLIC_AWS_REGION="us-east-1"
-NEXT_PUBLIC_COGNITO_USER_POOL_ID="your-user-pool-id"
+DATABASE_URL="postgresql://user:password@host:5432/dbname"
+NEXT_PUBLIC_AWS_REGION="ap-south-1"
+NEXT_PUBLIC_COGNITO_USER_POOL_ID="your-pool-id"
 NEXT_PUBLIC_COGNITO_CLIENT_ID="your-client-id"
-
-# Sync Server (optional for advanced real-time sync)
 NEXT_PUBLIC_SYNC_SERVER_URL="ws://localhost:5858"
 ```
 
-### 3. Set Up PostgreSQL Database
-
-Make sure PostgreSQL is running, then:
-
+### 3. Setup Database
 ```bash
-# Generate Prisma Client
-npm run prisma:generate
-
-# Run database migrations
-npm run prisma:migrate
-
-# (Optional) Open Prisma Studio to view data
-npm run prisma:studio
+npx prisma generate
+npx prisma migrate deploy
 ```
 
-### 4. Configure AWS Cognito
-
-1. Go to AWS Console → Cognito
-2. Create a User Pool
-3. Create an App Client (without client secret)
-4. Copy User Pool ID and Client ID to `.env`
-
-### 5. Run Development Server
-
+### 4. Run Development Servers
 ```bash
-npm run dev
+npm run dev:all
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
 
-## Project Structure
+## 🌐 AWS Deployment (Free Tier)
+
+### Deploy to EC2
+```bash
+bash deploy-github.sh
+```
+
+This will:
+- Launch t2.micro EC2 instance (free tier eligible)
+- Clone from GitHub
+- Build with correct EC2 IP
+- Setup Nginx reverse proxy
+- Start Next.js + WebSocket server with PM2
+
+**Cost**: $0/month (first 12 months) or ~$8/month after
+
+### Update Deployment
+```bash
+ssh -i ~/.ssh/whiteboard-key.pem ec2-user@<IP>
+cd ~/app
+git pull
+npm run build
+pm2 restart all
+```
+
+### Destroy Resources
+```bash
+bash destroy.sh
+```
+
+## 📁 Project Structure
 
 ```
 src/
 ├── app/
 │   ├── api/
-│   │   ├── boards/          # Board CRUD operations
+│   │   ├── boards/          # Board CRUD
 │   │   ├── snapshots/       # Snapshot save/load
-│   │   └── collaborations/  # Collaborator management
-│   ├── board/[id]/          # Whiteboard canvas page
+│   │   ├── collaborations/  # Collaborator management
+│   │   └── users/sync/      # User sync endpoint
+│   ├── board/[id]/          # Whiteboard canvas
 │   ├── dashboard/           # User dashboard
-│   ├── signin/              # Sign in page
-│   ├── signup/              # Sign up page
+│   ├── signin/              # Sign in
+│   ├── signup/              # Sign up (with email verification)
 │   └── page.js              # Landing page
 ├── components/
-│   └── WhiteboardCanvas.js  # tldraw integration
+│   ├── WhiteboardCanvas.js  # tldraw integration
+│   └── LoadingSpinner.js    # Loading component
 ├── contexts/
-│   └── AuthContext.js       # Authentication context
-└── lib/
-    ├── prisma.js            # Prisma client
-    └── cognito.js           # AWS Amplify config
+│   └── AuthContext.js       # Auth + user sync
+├── lib/
+│   ├── prisma.js            # Prisma client
+│   └── cognito.js           # AWS Amplify config
+└── middleware.js            # Route protection
+
+sync-server/
+└── server.mjs               # WebSocket sync server
+
+prisma/
+└── schema.prisma            # Database schema
 ```
 
-## Database Schema
+## 🗄️ Database Schema
 
-- **User**: Stores user information
-- **Board**: Whiteboard boards owned by users
-- **Snapshot**: JSON snapshots of board state
-- **Collaboration**: Board sharing and roles
+```prisma
+User {
+  id, email, cognitoId
+  boards (owned)
+  collaborations
+}
 
-## API Routes
+Board {
+  id, title, ownerId
+  snapshots
+  collaborations
+}
 
-- `GET /api/boards?userId={id}` - List user's boards
-- `POST /api/boards` - Create new board
-- `DELETE /api/boards?boardId={id}&userId={id}` - Delete board
-- `POST /api/snapshots` - Save board snapshot
-- `GET /api/snapshots?boardId={id}` - Get latest snapshot
-- `POST /api/collaborations` - Add collaborator
-- `DELETE /api/collaborations?collaborationId={id}` - Remove collaborator
+Snapshot {
+  id, boardId, data (JSON)
+}
 
-## Features Breakdown
+Collaboration {
+  id, boardId, userId, role
+}
+```
 
-### Authentication
-- AWS Cognito integration via AWS Amplify
-- Sign up, sign in, sign out
-- Protected routes
+## 🔌 API Routes
 
-### Board Management
-- Create, view, delete boards
-- Board thumbnails on dashboard
-- Last updated timestamps
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/boards?userId={id}` | List user's boards |
+| POST | `/api/boards` | Create new board |
+| DELETE | `/api/boards?boardId={id}&userId={id}` | Delete board |
+| POST | `/api/snapshots` | Save board snapshot |
+| GET | `/api/snapshots?boardId={id}` | Get latest snapshot |
+| POST | `/api/collaborations` | Add collaborator |
+| DELETE | `/api/collaborations?collaborationId={id}` | Remove collaborator |
+| POST | `/api/users/sync` | Sync Cognito user to DB |
 
-### Whiteboard Canvas
-- Full tldraw integration
-- Drawing tools: select, shapes, pen, pan, zoom
-- Auto-save every 2 minutes
-- Manual save button
-- Export to JSON, SVG, PNG
+## 🔧 Utility Scripts
 
-### Collaboration
-- Share boards via link
-- Add collaborators by email
-- Role-based permissions:
-  - **Owner**: Full control
-  - **Editor**: Can edit canvas
-  - **Viewer**: Read-only access
+| Script | Description |
+|--------|-------------|
+| `deploy-github.sh` | Deploy to EC2 from GitHub |
+| `destroy.sh` | Remove all AWS resources |
+| `debug.sh` | Check EC2 logs and status |
+| `logs.sh` | SSH and view PM2 logs |
+| `check-env.sh` | View .env on EC2 |
+| `fix-and-rebuild.sh` | Fix and rebuild on EC2 |
 
-### Snapshots
-- Automatic periodic saves
-- Manual "Force Save" button
-- Load last snapshot on board open
-- JSON storage in PostgreSQL
+## 🎯 Key Features Explained
 
-## Deployment to AWS Elastic Beanstalk
+### Real-time Collaboration
+- WebSocket server syncs drawing state across all connected users
+- Auto-saves to PostgreSQL every 30 seconds
+- Loads existing snapshot when joining a board
 
-1. Build the application:
+### Authentication Flow
+1. User signs up with email (Cognito)
+2. Email verification code sent
+3. User confirms and is synced to PostgreSQL
+4. Protected routes via middleware
+
+### Snapshot System
+- Stores tldraw state as JSON in PostgreSQL
+- Sync server loads snapshot on room creation
+- Manual save button for immediate persistence
+- Auto-save runs every 30 seconds while users are connected
+
+## 🐛 Troubleshooting
+
+### Local Development
 ```bash
+# Database issues
+npx prisma generate
+npx prisma migrate deploy
+
+# Clear build
+rm -rf .next
 npm run build
+
+# Check sync server
+curl http://localhost:5858
 ```
 
-2. Create Elastic Beanstalk application
-3. Configure environment variables
-4. Deploy using EB CLI or console
-5. Set up RDS PostgreSQL instance
-6. Update DATABASE_URL in EB environment
-
-## Optional: tldraw Sync Server
-
-For advanced real-time collaboration with WebSocket sync:
-
+### EC2 Deployment
 ```bash
-# Install globally or use npx
-npx @tldraw/sync-server
+# Check status
+bash debug.sh
+
+# View logs
+bash logs.sh
+# Then: pm2 logs
+
+# Rebuild
+bash fix-and-rebuild.sh
 ```
 
-Configure room authentication middleware for Cognito tokens.
+## 📝 Environment Variables
 
-## Troubleshooting
+### Required
+- `DATABASE_URL` - PostgreSQL connection string
+- `NEXT_PUBLIC_AWS_REGION` - AWS region for Cognito
+- `NEXT_PUBLIC_COGNITO_USER_POOL_ID` - Cognito User Pool ID
+- `NEXT_PUBLIC_COGNITO_CLIENT_ID` - Cognito App Client ID
+- `NEXT_PUBLIC_SYNC_SERVER_URL` - WebSocket server URL
 
-### Database Connection Issues
-- Ensure PostgreSQL is running
-- Check DATABASE_URL format
-- Run `npm run prisma:generate` after schema changes
+### Optional
+- `SYNC_PORT` - Sync server port (default: 5858)
+- `NODE_ENV` - Environment (production/development)
 
-### Authentication Issues
-- Verify Cognito User Pool ID and Client ID
-- Check AWS region configuration
-- Ensure app client has no client secret
-
-### Build Errors
-- Clear `.next` folder: `rm -rf .next`
-- Reinstall dependencies: `rm -rf node_modules && npm install`
-
-## License
+## 📄 License
 
 ISC
+
+## 🔗 Links
+
+- GitHub: https://github.com/adityanarke5-create/whiteboard-tldraw
+- tldraw: https://tldraw.dev
+- Next.js: https://nextjs.org
