@@ -35,3 +35,7 @@ prisma/migrations/
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Documentation (keep in repo)
+!README.md
+!*.md

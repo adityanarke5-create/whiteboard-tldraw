@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import LoadingSpinner from '@/components/LoadingSpinner'
 
 const WhiteboardCanvas = dynamic(
   () => import('@/components/WhiteboardCanvas'),
@@ -17,7 +18,6 @@ export default function BoardPage() {
   const router = useRouter()
   const { user } = useAuth()
   const [board, setBoard] = useState(null)
-  const [snapshot, setSnapshot] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showShareModal, setShowShareModal] = useState(false)
   const [collaboratorEmail, setCollaboratorEmail] = useState('')
@@ -35,11 +35,7 @@ export default function BoardPage() {
     if (!user) return
     
     try {
-      const [boardRes, snapshotRes] = await Promise.all([
-        fetch(`/api/boards?userId=${user.userId}`),
-        fetch(`/api/snapshots?boardId=${params.id}`)
-      ])
-
+      const boardRes = await fetch(`/api/boards?userId=${user.userId}`)
       const boards = await boardRes.json()
       const board = boards.find(b => b.id === params.id)
       
@@ -50,13 +46,6 @@ export default function BoardPage() {
       }
 
       setBoard(board)
-
-      if (snapshotRes.ok) {
-        const snapshotData = await snapshotRes.json()
-        if (snapshotData && snapshotData.data) {
-          setSnapshot(snapshotData.data)
-        }
-      }
     } catch (error) {
       toast.error('Failed to load board')
     } finally {
@@ -101,11 +90,7 @@ export default function BoardPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading board...</div>
-      </div>
-    )
+    return <LoadingSpinner message="Loading board..." />
   }
 
   if (!board) return null
@@ -150,7 +135,7 @@ export default function BoardPage() {
         </div>
       )}
 
-      <WhiteboardCanvas key={params.id} boardId={params.id} initialSnapshot={snapshot} />
+      <WhiteboardCanvas key={params.id} boardId={params.id} />
 
       {showShareModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-6 z-50">
