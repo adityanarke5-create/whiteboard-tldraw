@@ -12,6 +12,14 @@ const nextConfig = {
       },
     ]
   },
+  async rewrites() {
+    return [
+      {
+        source: '/ws/:path*',
+        destination: 'http://localhost:5858/:path*',
+      },
+    ]
+  },
 }
 
 module.exports = nextConfig

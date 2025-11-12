@@ -99,7 +99,14 @@ export default function WhiteboardCanvas({ boardId }) {
   const syncServerUrl = process.env.NEXT_PUBLIC_SYNC_SERVER_URL || 'ws://localhost:5858'
   const uri = `${syncServerUrl}?roomId=${boardId}`
   
-  const store = useSync({ uri, roomId: boardId })
+  const store = useSync({ 
+    uri, 
+    roomId: boardId,
+    onError: (error) => {
+      console.error('Sync error:', error)
+      toast.error('Connection error - working in offline mode')
+    }
+  })
 
   return (
     <div className="fixed inset-0">

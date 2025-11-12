@@ -95,33 +95,44 @@ async function getOrCreateRoom(roomId) {
 
 const wss = new WebSocketServer({ port: PORT })
 
+wss.on('error', (error) => {
+  console.error('❌ WebSocket Server error:', error.message)
+})
+
+wss.on('listening', () => {
+  console.log(`🚀 tldraw sync server running on ws://localhost:${PORT}`)
+})
+
 wss.on('connection', async (ws, req) => {
-  const url = new URL(req.url, `http://${req.headers.host}`)
-  const roomId = url.searchParams.get('roomId')
-  
-  if (!roomId) {
-    ws.close(1008, 'Room ID required')
-    return
-  }
+  try {
+    const url = new URL(req.url, `http://${req.headers.host}`)
+    const roomId = url.searchParams.get('roomId')
+    
+    if (!roomId) {
+      console.log('❌ Connection rejected: No room ID')
+      ws.close(1008, 'Room ID required')
+      return
+    }
 
-  // Validate roomId format (UUID)
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  if (!uuidRegex.test(roomId)) {
-    ws.close(1008, 'Invalid room ID format')
-    return
-  }
+    // Validate roomId format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(roomId)) {
+      console.log(`❌ Connection rejected: Invalid room ID format: ${roomId}`)
+      ws.close(1008, 'Invalid room ID format')
+      return
+    }
 
-  console.log(`👤 Client connected to room: ${roomId}`)
-  
-  const room = await getOrCreateRoom(roomId)
-  const sessionId = `session-${Date.now()}-${Math.random().toString(36).slice(2)}`
-  
-  // Pass socket with metadata object
-  room.handleSocketConnect({
-    sessionId,
-    socket: ws,
-    meta: {}
-  })
+    console.log(`👤 Client connected to room: ${roomId}`)
+    
+    const room = await getOrCreateRoom(roomId)
+    const sessionId = `session-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    
+    // Pass socket with metadata object
+    room.handleSocketConnect({
+      sessionId,
+      socket: ws,
+      meta: {}
+    })
 
   ws.on('close', async () => {
     console.log(`👋 Client disconnected from room: ${roomId}`)
@@ -141,10 +152,12 @@ wss.on('connection', async (ws, req) => {
     }
   })
 
-  ws.on('error', (error) => {
-    console.error(`❌ WebSocket error:`, error.message)
-    room.handleSocketError(sessionId, error)
-  })
+    ws.on('error', (error) => {
+      console.error(`❌ WebSocket error:`, error.message)
+      room.handleSocketError(sessionId, error)
+    })
+  } catch (error) {
+    console.error('❌ Connection error:', error.message)
+    ws.close(1011, 'Server error')
+  }
 })
-
-console.log(`🚀 tldraw sync server running on ws://localhost:${PORT}`)
