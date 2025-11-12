@@ -209,6 +209,7 @@ cd /home/ec2-user/app
 
 echo "📥 Cloning repository..."
 git clone $GITHUB_REPO .
+git checkout a4169e445d9a510faa24fa781227ce321e532966
 
 echo "📝 Creating .env file..."
 cat > .env <<'EOF'
