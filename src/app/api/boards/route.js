@@ -40,10 +40,22 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const { title, userId, userEmail } = await request.json()
+    const body = await request.json()
+    const { title, userId, userEmail } = body
 
     if (!title || !userId || !userEmail) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // Input validation
+    if (typeof title !== 'string' || title.length < 1 || title.length > 100) {
+      return NextResponse.json({ error: 'Invalid title' }, { status: 400 })
+    }
+    if (typeof userId !== 'string' || userId.length < 1) {
+      return NextResponse.json({ error: 'Invalid userId' }, { status: 400 })
+    }
+    if (typeof userEmail !== 'string' || !userEmail.includes('@')) {
+      return NextResponse.json({ error: 'Invalid email' }, { status: 400 })
     }
 
     const user = await prisma.user.upsert({

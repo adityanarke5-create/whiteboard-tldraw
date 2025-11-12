@@ -64,8 +64,7 @@ if ! aws ec2 describe-security-groups --group-names "$SG_NAME" --region "$AWS_RE
   SG_ID=$(aws ec2 create-security-group --group-name "$SG_NAME" --description "Whiteboard" --vpc-id "$VPC_ID" --region "$AWS_REGION" --query "GroupId" --output text)
   
   aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --protocol tcp --port 80 --cidr 0.0.0.0/0 --region "$AWS_REGION" 2>/dev/null || true
-  aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --protocol tcp --port 3000 --cidr 0.0.0.0/0 --region "$AWS_REGION" 2>/dev/null || true
-  aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --protocol tcp --port 5858 --cidr 0.0.0.0/0 --region "$AWS_REGION" 2>/dev/null || true
+  aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --protocol tcp --port 443 --cidr 0.0.0.0/0 --region "$AWS_REGION" 2>/dev/null || true
   aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --protocol tcp --port 22 --cidr 0.0.0.0/0 --region "$AWS_REGION" 2>/dev/null || true
   echo "✅ Created: $SG_ID"
 else
@@ -89,21 +88,70 @@ npm install -g pm2
 mkdir -p /home/ec2-user/app
 chown -R ec2-user:ec2-user /home/ec2-user/app
 
-cat > /etc/nginx/conf.d/app.conf <<'NGINX'
-server {
-    listen 80;
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-    }
-    location /sync {
-        proxy_pass http://localhost:5858;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+cat > /etc/nginx/nginx.conf <<'NGINX'
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log /var/log/nginx/access.log main;
+    sendfile on;
+    tcp_nopush on;
+    keepalive_timeout 65;
+    types_hash_max_size 4096;
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # Rate limiting zones
+    limit_req_zone \$binary_remote_addr zone=api_limit:10m rate=10r/s;
+    limit_req_zone \$binary_remote_addr zone=ws_limit:10m rate=5r/s;
+
+    server {
+        listen 80;
+        
+        # Security headers
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        
+        location /api/ {
+            limit_req zone=api_limit burst=20 nodelay;
+            proxy_pass http://localhost:3000;
+            proxy_http_version 1.1;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        }
+        
+        location /sync {
+            limit_req zone=ws_limit burst=10 nodelay;
+            proxy_pass http://localhost:5858;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade \$http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+        }
+        
+        location / {
+            proxy_pass http://localhost:3000;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade \$http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        }
     }
 }
 NGINX
@@ -156,7 +204,7 @@ sleep 60
 
 # ---------- Deploy from GitHub ----------
 echo "📤 Deploying from GitHub..."
-ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no ec2-user@$PUBLIC_IP bash <<REMOTE
+ssh -i "$KEY_PATH" ec2-user@$PUBLIC_IP bash <<REMOTE
 cd /home/ec2-user/app
 
 echo "📥 Cloning repository..."
@@ -178,7 +226,7 @@ sed -i "s|\\\$COG_POOL|$COGNITO_POOL_ID|g" .env
 sed -i "s|\\\$COG_CLIENT|$COGNITO_CLIENT_ID|g" .env
 sed -i "s|\\\$PUB_IP|$PUBLIC_IP|g" .env
 
-echo "✅ .env created"
+echo "✅ .env created (credentials hidden)"
 
 echo "📦 Installing dependencies..."
 npm ci

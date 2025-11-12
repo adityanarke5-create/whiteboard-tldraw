@@ -100,38 +100,43 @@ export default function BoardPage() {
 
   return (
     <div className="relative h-screen">
-      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 flex gap-2">
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 flex gap-2 items-center">
         <Link
           href="/dashboard"
-          className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium shadow-sm"
+          className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-2"
         >
           ← Dashboard
         </Link>
         
-        <div className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium shadow-sm">
-          {board.title}
+        <div className="px-4 py-2 bg-white border-2 border-indigo-200 rounded-lg text-sm font-semibold shadow-md flex items-center gap-2">
+          <span className="text-indigo-600">🎨</span>
+          <span className="text-gray-900">{board.title}</span>
+          {isOwner && <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full">Owner</span>}
+          {userRole === 'editor' && <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">Editor</span>}
+          {userRole === 'viewer' && <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded-full">Viewer</span>}
         </div>
 
         {isOwner && (
           <button
             onClick={() => setShowShareModal(true)}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium shadow-sm"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-2"
           >
-            🔗 Share
+            👥 Share
           </button>
         )}
 
         <button
           onClick={copyShareLink}
-          className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium shadow-sm"
+          className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-2"
         >
-          📋 Copy Link
+          🔗 Copy Link
         </button>
       </div>
 
       {userRole === 'viewer' && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-10 px-4 py-2 bg-yellow-100 border border-yellow-300 rounded-lg text-sm">
-          View-only mode
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-10 px-4 py-2 bg-yellow-50 border-2 border-yellow-300 rounded-lg text-sm font-medium shadow-md flex items-center gap-2">
+          <span>⚠️</span>
+          <span>View-only mode - You cannot edit this board</span>
         </div>
       )}
 

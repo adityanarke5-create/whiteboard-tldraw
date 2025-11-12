@@ -104,6 +104,13 @@ wss.on('connection', async (ws, req) => {
     return
   }
 
+  // Validate roomId format (UUID)
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!uuidRegex.test(roomId)) {
+    ws.close(1008, 'Invalid room ID format')
+    return
+  }
+
   console.log(`👤 Client connected to room: ${roomId}`)
   
   const room = await getOrCreateRoom(roomId)

@@ -116,51 +116,92 @@ export default function Dashboard() {
       </nav>
 
       <main className="container mx-auto px-6 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">My Boards</h2>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold"
-          >
-            + Create New Board
-          </button>
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900">My Boards</h2>
+              <p className="text-gray-600 mt-1">{boards.length} {boards.length === 1 ? 'board' : 'boards'} total</p>
+            </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+            >
+              <span className="text-xl">+</span> Create New Board
+            </button>
+          </div>
+          
+          {user && (
+            <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                  <span className="text-indigo-600 font-semibold text-lg">{user.username?.[0]?.toUpperCase() || '👤'}</span>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">{user.username}</p>
+                  <p className="text-sm text-gray-500">{user.signInDetails?.loginId || user.username}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {boards.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-gray-500 text-lg mb-4">No boards yet</p>
+          <div className="text-center py-20 bg-white rounded-lg shadow-sm">
+            <div className="text-6xl mb-4">📋</div>
+            <p className="text-gray-500 text-lg mb-2">No boards yet</p>
+            <p className="text-gray-400 text-sm mb-6">Create your first board to get started</p>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="text-indigo-600 hover:text-indigo-800 font-medium"
+              className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold inline-flex items-center gap-2"
             >
-              Create your first board
+              <span className="text-xl">+</span> Create Board
             </button>
           </div>
         ) : (
           <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {boards.map((board) => (
-              <div key={board.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow">
-                <Link href={`/board/${board.id}`}>
-                  <div className="p-6 cursor-pointer">
-                    <div className="h-32 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg mb-4"></div>
-                    <h3 className="font-semibold text-lg text-gray-900 mb-2">{board.title}</h3>
-                    <p className="text-sm text-gray-500">
-                      {new Date(board.updatedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </Link>
-                {user && board.ownerId === user.userId && (
-                  <div className="px-6 pb-4">
-                    <button
-                      onClick={() => deleteBoard(board.id)}
-                      className="text-sm text-red-600 hover:text-red-800"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+            {boards.map((board) => {
+              const isOwner = user && board.ownerId === user.userId
+              const collaboratorCount = board.collaborators?.length || 0
+              return (
+                <div key={board.id} className="bg-white rounded-lg shadow-md hover:shadow-xl transition-all border border-gray-200 overflow-hidden group">
+                  <Link href={`/board/${board.id}`}>
+                    <div className="cursor-pointer">
+                      <div className="h-32 bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                        <div className="absolute top-2 right-2">
+                          {isOwner ? (
+                            <span className="px-2 py-1 bg-indigo-600 text-white text-xs rounded-full font-medium">Owner</span>
+                          ) : (
+                            <span className="px-2 py-1 bg-green-600 text-white text-xs rounded-full font-medium">Shared</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-semibold text-lg text-gray-900 mb-2 truncate group-hover:text-indigo-600 transition-colors">{board.title}</h3>
+                        <div className="flex items-center justify-between text-sm text-gray-500">
+                          <span>📅 {new Date(board.updatedAt).toLocaleDateString()}</span>
+                          {collaboratorCount > 0 && (
+                            <span className="flex items-center gap-1">
+                              👥 {collaboratorCount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                  {isOwner && (
+                    <div className="px-4 pb-3 pt-2 border-t border-gray-100 flex justify-between items-center">
+                      <button
+                        onClick={() => deleteBoard(board.id)}
+                        className="text-sm text-red-600 hover:text-red-800 font-medium flex items-center gap-1"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </main>
